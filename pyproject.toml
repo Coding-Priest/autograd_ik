@@ -3,9 +3,10 @@ name = "autograd-ik"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "numpy>=2.4.2",
+    "pybullet>=3.2.7",
     "pygame>=2.6.1",
     "torch>=2.10.0",
 ]

@@ -7,12 +7,12 @@ WIDTH, HEIGHT = 800, 600
 ORIGIN = torch.tensor([WIDTH // 2, HEIGHT // 2], dtype=torch.float32)
 LINK_L1 = 150.0
 LINK_L2 = 100.0
-LEARNING_RATE = 0.05
+LEARNING_RATE = 0.0001
 
 # --- Initialize PyTorch Parameters ---
 # We start with joint angles at 0.1 radians to avoid initial zero-gradient states
 thetas = torch.tensor([0.1, 0.1], requires_grad=True)
-optimizer = torch.optim.RMSprop([thetas], lr=LEARNING_RATE)
+optimizer = torch.optim.SGD([thetas], lr=LEARNING_RATE)
 
 def forward_kinematics(t):
     # Joint 1 position
