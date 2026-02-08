@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import pybullet as p
 import pybullet_data
 import torch
