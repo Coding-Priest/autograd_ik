@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.11)
+project(cmink LANGUAGES C CXX)
 
-project(mink LANGUAGES C CXX)
 set(MUJOCO_BUILD_EXAMPLES OFF CACHE BOOL "Disable examples" FORCE)
 set(MUJOCO_BUILD_SIMULATE OFF CACHE BOOL "Disable UI/simulate" FORCE)
 set(MUJOCO_BUILD_TESTS OFF CACHE BOOL "Disable tests" FORCE)
