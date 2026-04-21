@@ -30,8 +30,8 @@ enum joint_type {
 struct link {
   char *name;
   char *vis_mesh; 
-  char *col_mesh;
   se3_t vis_pose;
+  char *col_mesh;
   se3_t col_pose;
   inertial_t inertial;
 };
@@ -61,5 +61,11 @@ struct ktree {
  * - directed acyclic graph
 */
 bool valid(ktree_t *tree, char *error_messsage);
+
+/* loads the chain from a urdf string */
+ktree_t *urdf2chain(char *urdf_string);
+
+/* loads the chain from a urdf file */
+ktree_t *furdf2chain(char *urdf_file);
 
 #endif
