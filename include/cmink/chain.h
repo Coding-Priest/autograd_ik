@@ -57,8 +57,8 @@ struct ktree {
 
 /* 
  * checks if the kinematic tree is valid
- * this includes the following tests
- * - directed acyclic graph
+ * - find the root of the tree
+ * - checks if tree is DAG 
 */
 bool valid(ktree_t *tree, char *error_messsage);
 

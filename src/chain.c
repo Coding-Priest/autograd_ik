@@ -22,7 +22,6 @@ static char *xprop(xmlXPathContextPtr ctx, const char *expr) {
 
   xmlFree(v);
   xmlXPathFreeObject(obj);
-
   return out;
 }
 
