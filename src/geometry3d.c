@@ -1,0 +1,175 @@
+#include <math.h>
+#include <cmink/geometry3d.h>
+
+so3_t rpy2quat(so3_rpy_t rpy) {
+  so3_t q;
+
+  double cr = cos(rpy.r * 0.5);
+  double sr = sin(rpy.r * 0.5);
+
+  double cp = cos(rpy.p * 0.5);
+  double sp = sin(rpy.p * 0.5);
+
+  double cy = cos(rpy.y * 0.5);
+  double sy = sin(rpy.y * 0.5);
+
+  q.w = cy * cp * cr + sy * sp * sr;
+  q.x = cy * cp * sr - sy * sp * cr;
+  q.y = cy * sp * cr + sy * cp * sr;
+  q.z = sy * cp * cr - cy * sp * sr;
+
+  return q;
+}
+
+so3_rpy_t quat2rpy(so3_t q) {
+  so3_rpy_t rpy;
+
+  double w = q.w;
+  double x = q.x;
+  double y = q.y;
+  double z = q.z;
+
+  double sr = 2.0 * (w * x + y * z);
+  double cr = 1.0 - 2.0 * (x * x + y * y);
+  rpy.r = atan2(sr, cr);
+
+  double sp = 2.0 * (w * y - z * x);
+
+  if (sp >= 1.0) rpy.p =  M_PI_2;
+  else if (sp <= -1.0) rpy.p = -M_PI_2;
+  else rpy.p = asin(sp);
+
+  double sy = 2.0 * (w * z + x * y);
+  double cy = 1.0 - 2.0 * (y * y + z * z);
+  rpy.y = atan2(sy, cy);
+
+  return rpy;
+}
+
+
+// copied this from an llm
+// I don't understand this at all
+so3_t mat2quat(const matrix3d_t m) {
+  so3_t q;
+  double t = m[0][0] + m[1][1] + m[2][2];
+
+  if (t > 0.0) {
+    double s = sqrt(t + 1.0) * 2.0;
+    q.w = 0.25 * s;
+    q.x = (m[2][1] - m[1][2]) / s;
+    q.y = (m[0][2] - m[2][0]) / s;
+    q.z = (m[1][0] - m[0][1]) / s;
+  }else if (m[0][0] > m[1][1] && m[0][0] > m[2][2]) {
+    double s = sqrt(1.0 + m[0][0] - m[1][1] - m[2][2]) * 2.0;
+    q.w = (m[2][1] - m[1][2]) / s;
+    q.x = 0.25 * s;
+    q.y = (m[0][1] + m[1][0]) / s;
+    q.z = (m[0][2] + m[2][0]) / s;
+  }else if (m[1][1] > m[2][2]) {
+    double s = sqrt(1.0 + m[1][1] - m[0][0] - m[2][2]) * 2.0;
+    q.w = (m[0][2] - m[2][0]) / s;
+    q.x = (m[0][1] + m[1][0]) / s;
+    q.y = 0.25 * s;
+    q.z = (m[1][2] + m[2][1]) / s;
+  }else {
+    double s = sqrt(1.0 + m[2][2] - m[0][0] - m[1][1]) * 2.0;
+    q.w = (m[1][0] - m[0][1]) / s;
+    q.x = (m[0][2] + m[2][0]) / s;
+    q.y = (m[1][2] + m[2][1]) / s;
+    q.z = 0.25 * s;
+  }
+
+  return q;
+}
+
+void quat2mat(so3_t q, matrix3d_t mat) {
+  double x2 = q.x * q.x;
+  double y2 = q.y * q.y;
+  double z2 = q.z * q.z;
+
+  double wx = q.w * q.x;
+  double wy = q.w * q.y;
+  double wz = q.w * q.z;
+
+  double xy = q.x * q.y;
+  double xz = q.x * q.z;
+  double yz = q.y * q.z;
+
+  mat[0][0] = 1.0 - 2.0 * (y2 + z2);
+  mat[0][1] = 2.0 * (xy - wz);
+  mat[0][2] = 2.0 * (xz + wy);
+
+  mat[1][0] = 2.0 * (xy + wz);
+  mat[1][1] = 1.0 - 2.0 * (x2 + z2);
+  mat[1][2] = 2.0 * (yz - wx);
+
+  mat[2][0] = 2.0 * (xz - wy);
+  mat[2][1] = 2.0 * (yz + wx);
+  mat[2][2] = 1.0 - 2.0 * (x2 + y2);
+}
+
+so3_rpy_t mat2rpy(const matrix3d_t m) {
+  so3_rpy_t rpy;
+  double sp = -m[2][0];
+
+  if (sp >= 1.0) rpy.p =  M_PI_2;
+  else if (sp <= -1.0) rpy.p = -M_PI_2;
+  else rpy.p = asin(sp);
+
+  double cp = cos(rpy.p);
+
+  if (fabs(cp) > 1e-8) {
+    rpy.r = atan2(m[2][1] / cp, m[2][2] / cp);
+    rpy.y = atan2(m[1][0] / cp, m[0][0] / cp);
+  }else {
+    rpy.r = 0.0;
+    rpy.y = atan2(-m[0][1], m[1][1]);
+  }
+
+  return rpy;
+}
+
+void rpy2mat(so3_rpy_t rpy, matrix3d_t m) {
+  double cr = cos(rpy.r);
+  double sr = sin(rpy.r);
+
+  double cp = cos(rpy.p);
+  double sp = sin(rpy.p);
+
+  double cy = cos(rpy.y);
+  double sy = sin(rpy.y);
+
+  m[0][0] = cy * cp;
+  m[0][1] = cy * sp * sr - sy * cr;
+  m[0][2] = cy * sp * cr + sy * sr;
+
+  m[1][0] = sy * cp;
+  m[1][1] = sy * sp * sr + cy * cr;
+  m[1][2] = sy * sp * cr - cy * sr;
+
+  m[2][0] = -sp;
+  m[2][1] = cp * sr;
+  m[2][2] = cp * cr;
+}
+
+void anorm(axis_t *axis) {
+  double den = sqrt(axis->x * axis->x + 
+                    axis->y * axis->y + 
+                    axis->z * axis->z);
+  if (den == 0) return ;
+  axis->x /= den;
+  axis->y /= den;
+  axis->z /= den;
+}
+
+void qnorm(so3_t *q) {
+  double den = sqrt(q->w + q->w +
+                    q->x * q->x + 
+                    q->y * q->y + 
+                    q->z * q->z);
+  if (den == 0) return ;
+  q->w /= den;
+  q->x /= den;
+  q->y /= den;
+  q->z /= den;
+}
