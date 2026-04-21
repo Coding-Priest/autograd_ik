@@ -9,7 +9,7 @@
 
 typedef struct vec3    vec3_t;
 typedef struct so3     so3_t;
-typedef struct so3_rpy  so3_rpy_t;
+typedef struct so3_rpy so3_rpy_t;
 typedef struct se3     se3_t;
 typedef struct axis    axis_t;
 

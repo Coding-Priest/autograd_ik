@@ -68,4 +68,7 @@ ktree_t *urdf2chain(char *urdf_string);
 /* loads the chain from a urdf file */
 ktree_t *furdf2chain(char *urdf_file);
 
+/* free the tree safely to avoid memory leaks */
+void free_tree(ktree_t *tree);
+
 #endif

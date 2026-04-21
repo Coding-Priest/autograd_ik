@@ -7,7 +7,7 @@
  *    - inertial 
 */
 
-#ifndef RIGID_BODY_h
+#ifndef RIGID_BODY_H
 #define RIGID_BODY_H
 
 #include <cmink/geometry3d.h>

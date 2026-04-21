@@ -25,3 +25,5 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 # debug exe
 add_executable(main src/main.c)
 target_link_libraries(main PRIVATE ${PROJECT_NAME})
+target_compile_options(main PRIVATE -g -fsanitize=address -fno-omit-frame-pointer -Wall)
+target_link_options(main PRIVATE -fsanitize=address)

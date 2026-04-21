@@ -8,10 +8,12 @@
 #include <libxml/xpathInternals.h>
 
 // helper function, takes in a pattern and returns the value
-static char* xprop(xmlXPathContextPtr ctx, const char *expr) {
+static char *xprop(xmlXPathContextPtr ctx, const char *expr) {
   xmlXPathObjectPtr obj = xmlXPathEvalExpression(BAD_CAST expr, ctx);
-  if (!obj || !obj->nodesetval || obj->nodesetval->nodeNr == 0)
+  if (!obj || !obj->nodesetval || obj->nodesetval->nodeNr == 0) {
+    xmlXPathFreeObject(obj);
     return "";
+  }
 
   xmlNodePtr n = obj->nodesetval->nodeTab[0];
   xmlChar *v = xmlNodeGetContent(n);
@@ -54,8 +56,10 @@ ktree_t *urdf2chain(char *urdf_string) {
   xmlNodePtr root = xmlDocGetRootElement(doc);
   xmlXPathContextPtr ctx = xmlXPathNewContext(doc);
 
-  tree->name = malloc(sizeof(char) * strlen(root->name));
-  strcpy(tree->name, xmlGetProp(root, "name"));
+  char *robot_name = xmlGetProp(root, "name");
+  tree->name = malloc(sizeof(char) * (strlen(robot_name) + 1)); // count the '\0' char
+  strcpy(tree->name, robot_name);
+  free(robot_name);
 
   tree->n_link = 0;
   tree->n_joint = 0;
@@ -79,15 +83,61 @@ ktree_t *urdf2chain(char *urdf_string) {
       link_t *L = (tree->links + tree->n_link);
 
       L->name = xprop(ctx, "@name");
+
+      // reusage registers
+      so3_rpy_t eu; 
+      char *xyz;
+      char *rpy;
+
       L->vis_mesh = xprop(ctx, "visual/geometry/mesh/@filename");
 
-      char *xyz = xprop(ctx, "visual/origin/@xyz");
+      xyz = xprop(ctx, "visual/origin/@xyz");
       sscanf(xyz, "%lf %lf %lf",
-        L->vis_pose.t.x,
-        L->vis_pose.t.y,
-        L->vis_pose.t.z);
+        &L->vis_pose.t.x,
+        &L->vis_pose.t.y,
+        &L->vis_pose.t.z);
      
-      char *rpy = xprop(ctx, "visual/origin/@rpy");
+      rpy = xprop(ctx, "visual/origin/@rpy");
+      sscanf(rpy, "%lf %lf %lf",
+        &eu.r,
+        &eu.p,
+        &eu.y);
+      L->vis_pose.R = rpy2quat(eu);
+
+      L->col_mesh = xprop(ctx, "collision/geometry/mesh/@filename");
+
+      xyz = xprop(ctx, "collision/origin/@xyz");
+      sscanf(xyz, "%lf %lf %lf",
+        &L->col_pose.t.x,
+        &L->col_pose.t.y,
+        &L->col_pose.t.z);
+     
+      rpy = xprop(ctx, "collision/origin/@rpy");
+      sscanf(rpy, "%lf %lf %lf",
+        &eu.r,
+        &eu.p,
+        &eu.y);
+      L->col_pose.R = rpy2quat(eu);
+
+      xyz = xprop(ctx, "inertial/origin/@xyz");
+      sscanf(xyz, "%lf %lf %lf",
+        &L->inertial.origin.t.x,
+        &L->inertial.origin.t.y,
+        &L->inertial.origin.t.z);
+
+      rpy = xprop(ctx, "inertial/origin/@rpy");
+      sscanf(rpy, "%lf %lf %lf",
+        &eu.r,
+        &eu.p,
+        &eu.y);
+      L->inertial.origin.R    = rpy2quat(eu);
+      L->inertial.mass        = atoi(xprop(ctx, "inertial/mass/@value"));
+      L->inertial.inertia.ixx = atoi(xprop(ctx, "inertial/inertia/@ixx"));
+      L->inertial.inertia.iyy = atoi(xprop(ctx, "inertial/inertia/@iyy"));
+      L->inertial.inertia.izz = atoi(xprop(ctx, "inertial/inertia/@izz"));
+      L->inertial.inertia.ixy = atoi(xprop(ctx, "inertial/inertia/@ixy"));
+      L->inertial.inertia.iyz = atoi(xprop(ctx, "inertial/inertia/@iyz"));
+      L->inertial.inertia.izx = atoi(xprop(ctx, "inertial/inertia/@izx"));
 
       ++(tree->n_link);
     }
@@ -118,5 +168,28 @@ ktree_t *furdf2chain(char *urdf_file) {
 
   close(fd);
 
-  return urdf2chain(urdf_string);
+  ktree_t *tree = urdf2chain(urdf_string);
+  free(urdf_string);
+
+  return tree;
+}
+
+void free_tree(ktree_t *tree) {
+  free(tree->name);
+
+  for (uint32_t t = 0; t < tree->n_link; ++t) {
+    free(tree->links[t].name);
+    free(tree->links[t].vis_mesh);
+    free(tree->links[t].col_mesh);
+  }free(tree->links);
+
+  for (uint32_t t = 0; t < tree->n_joint; ++t) {
+    free(tree->joints[t].name);
+    // free the dangling ptrs
+    free(tree->joints[t].parent); 
+    free(tree->joints[t].child); 
+  }free(tree->joints);
+
+  free(tree->root); // dangling ptr
+  free(tree);
 }
