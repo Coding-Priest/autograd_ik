@@ -8,4 +8,5 @@ set(MUJOCO_TEST_PYTHON_UTIL OFF CACHE BOOL "Disable python utils" FORCE)
 
 add_subdirectory(mujoco)
 add_executable(main src/main.c)
+include_directories(include)
 target_link_libraries(main PRIVATE mujoco::mujoco)

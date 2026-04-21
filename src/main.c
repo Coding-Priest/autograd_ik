@@ -1,7 +1,10 @@
 #include <stdio.h>
-#include <mujoco/mujoco.h>
+#include <cmink/geometry3d.h>
+#include <cmink/rigbody.h>
+#include <cmink/limit.h>
+#include <cmink/chain.h>
 
 int main(int argc, char **argv) {
-  printf("successfully linked against MuJoCo version: %s\n", mj_versionString());
+
   return 0;
 }
