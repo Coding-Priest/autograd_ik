@@ -7,6 +7,10 @@ set(MUJOCO_BUILD_TESTS OFF CACHE BOOL "Disable tests" FORCE)
 set(MUJOCO_TEST_PYTHON_UTIL OFF CACHE BOOL "Disable python utils" FORCE)
 
 add_subdirectory(mujoco)
+
+add_library(${PROJECT_NAME} src/chain.c)
+target_include_directories(${PROJECT_NAME} PUBLIC include)
+target_link_libraries(${PROJECT_NAME} PUBLIC mujoco::mujoco)
+
 add_executable(main src/main.c)
-include_directories(include)
-target_link_libraries(main PRIVATE mujoco::mujoco)
+target_link_libraries(main PRIVATE ${PROJECT_NAME})

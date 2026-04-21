@@ -1,10 +1,13 @@
 #include <stdio.h>
-#include <cmink/geometry3d.h>
-#include <cmink/rigbody.h>
-#include <cmink/limit.h>
+
 #include <cmink/chain.h>
 
 int main(int argc, char **argv) {
+
+  ktree_t tree;
+  char *emsg;
+  int v = valid(&tree, emsg);
+  printf("%d\n", v);
 
   return 0;
 }
