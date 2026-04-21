@@ -33,11 +33,28 @@ static char *xprop(xmlXPathContextPtr ctx, const char *expr) {
 
 #include <cmink/chain.h>
 
+link_t *lprop(ktree_t *tree, char *lname) {
+  for (uint32_t t = 0; t < tree->n_link; ++t) {
+    if (strcmp(tree->links[t].name, lname) == 0) {
+      return (tree->links + t);
+    }
+  }return NULL;
+}
+
+enum joint_type jmap(char *type) {
+  if (!type) return FIXED;
+  if (strcmp(type, "fixed") == 0)      return FIXED;
+  if (strcmp(type, "revolute") == 0)   return REVOLUTE;
+  if (strcmp(type, "continuous") == 0) return CONTINUOUS;
+  if (strcmp(type, "prismatic") == 0)  return PRISMATIC;
+  if (strcmp(type, "floating") == 0)   return FLOATING;
+  if (strcmp(type, "planar") == 0)     return PLANAR;
+  return FIXED;
+}
+
 #define RBUFFER_SIZE 1000
 
 bool valid(ktree_t *tree, char *error_message) {
-  error_message = (char *) malloc(sizeof(char) * 256);
-  memset(error_message, 0, sizeof(char) * 256);
   return false;
 }
 
@@ -131,15 +148,62 @@ ktree_t *urdf2chain(char *urdf_string) {
         &eu.p,
         &eu.y);
       L->inertial.origin.R    = rpy2quat(eu);
-      L->inertial.mass        = atoi(xprop(ctx, "inertial/mass/@value"));
-      L->inertial.inertia.ixx = atoi(xprop(ctx, "inertial/inertia/@ixx"));
-      L->inertial.inertia.iyy = atoi(xprop(ctx, "inertial/inertia/@iyy"));
-      L->inertial.inertia.izz = atoi(xprop(ctx, "inertial/inertia/@izz"));
-      L->inertial.inertia.ixy = atoi(xprop(ctx, "inertial/inertia/@ixy"));
-      L->inertial.inertia.iyz = atoi(xprop(ctx, "inertial/inertia/@iyz"));
-      L->inertial.inertia.izx = atoi(xprop(ctx, "inertial/inertia/@izx"));
+      L->inertial.mass        = atof(xprop(ctx, "inertial/mass/@value"));
+      L->inertial.inertia.ixx = atof(xprop(ctx, "inertial/inertia/@ixx"));
+      L->inertial.inertia.iyy = atof(xprop(ctx, "inertial/inertia/@iyy"));
+      L->inertial.inertia.izz = atof(xprop(ctx, "inertial/inertia/@izz"));
+      L->inertial.inertia.ixy = atof(xprop(ctx, "inertial/inertia/@ixy"));
+      L->inertial.inertia.iyz = atof(xprop(ctx, "inertial/inertia/@iyz"));
+      L->inertial.inertia.izx = atof(xprop(ctx, "inertial/inertia/@izx"));
 
       ++(tree->n_link);
+    }
+  }
+
+  tree->joints = (joint_t *) malloc(sizeof(joint_t) * tree->n_joint);
+  tree->n_joint = 0;
+
+  // the following algo is O(l*j)
+  // TODO: make it O(j)
+  for (xmlNodePtr node = root->children; node; node = node->next) {
+    if (node->type != XML_ELEMENT_NODE) continue;
+    if (strcmp(node->name, "joint") == 0) {
+      ctx->node = node;
+      joint_t *J = &tree->joints[tree->n_joint];
+
+      J->name = xprop(ctx, "@name");
+      J->type = jmap(xprop(ctx, "@type"));
+
+      char *xyz = xprop(ctx, "origin/@xyz");
+      sscanf(xyz, "%lf %lf %lf",
+        &J->origin.t.x,
+        &J->origin.t.y,
+        &J->origin.t.z);
+
+      so3_rpy_t eu;
+      char *rpy = xprop(ctx, "origin/@rpy");
+      sscanf(xyz, "%lf %lf %lf",
+        &eu.r,
+        &eu.p,
+        &eu.y);
+      J->origin.R = rpy2quat(eu);
+
+      // lprop is O(l)
+      J->parent = lprop(tree, xprop(ctx, "parent/@link"));
+      J->child = lprop(tree, xprop(ctx, "child/@link"));
+      xyz = xprop(ctx, "axis/@xyz");
+      sscanf(xyz, "%lf %lf %lf",
+        &J->axis.x,
+        &J->axis.y,
+        &J->axis.z);
+      anorm(&J->axis); // axis l2 normalization 
+
+      J->limit.lower    = atof(xprop(ctx, "limit/@lower"));
+      J->limit.upper    = atof(xprop(ctx, "limit/@upper"));
+      J->limit.effort   = atof(xprop(ctx, "limit/@effort"));
+      J->limit.velocity = atof(xprop(ctx, "limit/@velocity"));
+    
+      ++(tree->n_joint);
     }
   }
 
@@ -185,11 +249,7 @@ void free_tree(ktree_t *tree) {
 
   for (uint32_t t = 0; t < tree->n_joint; ++t) {
     free(tree->joints[t].name);
-    // free the dangling ptrs
-    free(tree->joints[t].parent); 
-    free(tree->joints[t].child); 
   }free(tree->joints);
 
-  free(tree->root); // dangling ptr
   free(tree);
 }
