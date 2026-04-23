@@ -17,6 +17,7 @@
 typedef struct link  link_t;
 typedef struct joint joint_t;
 typedef struct ktree ktree_t;
+typedef struct chain chain_t;
 
 enum joint_type {
   FIXED,
@@ -50,9 +51,22 @@ struct ktree {
   char *name;
   uint32_t n_link;
   uint32_t n_joint;
-  link_t  *links;
-  joint_t *joints;
+  link_t  *links;  // list of links
+  joint_t *joints; // list of joints
   link_t *root;
+};
+
+struct chain {
+  int dof;
+
+  link_t *base;
+  link_t *tip;
+
+  /* 
+   * all the joints in the chain
+   * in order 
+  */
+  joint_t *joints;
 };
 
 /* 
@@ -70,5 +84,17 @@ ktree_t *furdf2chain(char *urdf_file);
 
 /* free the tree safely to avoid memory leaks */
 void free_tree(ktree_t *tree);
+
+/* 
+ * construction of chain from
+ * base and tip link
+ * assumes height(base) < hight(tip)
+ * TODO: remove this assumption ^
+*/
+chain_t *get_chain(
+  ktree_t *tree, char *base, char *tip);
+
+/* free the chain safely to avoid memory leaks */
+void free_chain(chain_t *chain);
 
 #endif

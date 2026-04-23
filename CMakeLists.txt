@@ -7,9 +7,9 @@ add_library(${PROJECT_NAME}
   src/chain.c
   src/geometry3d.c
 )
-
 target_compile_definitions(${PROJECT_NAME} PRIVATE MAX_URDF_SIZE=20000)
-
+# remember to remove this
+target_compile_options(${PROJECT_NAME} PRIVATE -g -fsanitize=address -fno-omit-frame-pointer -Wall)
 target_include_directories(${PROJECT_NAME} PUBLIC 
   include 
   ${LIBXML2_INCLUDE_DIR}

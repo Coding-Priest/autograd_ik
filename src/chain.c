@@ -12,23 +12,16 @@ static char *xprop(xmlXPathContextPtr ctx, const char *expr) {
   xmlXPathObjectPtr obj = xmlXPathEvalExpression(BAD_CAST expr, ctx);
   if (!obj || !obj->nodesetval || obj->nodesetval->nodeNr == 0) {
     xmlXPathFreeObject(obj);
-    return "";
+    return strdup(""); // heap-allocated so caller can free() uniformly
   }
 
   xmlNodePtr n = obj->nodesetval->nodeTab[0];
   xmlChar *v = xmlNodeGetContent(n);
 
-  char *temp = strdup((char*)v);
-  char *out  = malloc(sizeof(char) * (strlen(temp) + 1));
-  if (out == NULL) {
-    fprintf(stderr, "error: malloc failed..\n");  
-    exit(1);
-  }
-  strcpy(out, temp);
+  char *out = strdup((char *) v);
 
   xmlFree(v);
   xmlXPathFreeObject(obj);
-  free(temp);
   return out;
 }
 
@@ -43,6 +36,30 @@ link_t *lprop(ktree_t *tree, char *lname) {
   for (uint32_t t = 0; t < tree->n_link; ++t) {
     if (strcmp(tree->links[t].name, lname) == 0) {
       return (tree->links + t);
+    }
+  }return NULL;
+}
+
+joint_t *jprop(ktree_t *tree, char *jname) {
+  for (uint32_t t = 0; t < tree->n_joint; ++t) {
+    if (strcmp(tree->joints[t].name, jname) == 0) {
+      return (tree->joints + t);
+    }
+  }return NULL;
+}
+
+joint_t* jpropc(ktree_t *tree, char *child) {
+  for (uint32_t t = 0; t < tree->n_joint; ++t) {
+    if (strcmp(tree->joints[t].child->name, child) == 0) {
+      return (tree->joints + t);
+    }
+  }return NULL;
+}
+
+joint_t* jpropp(ktree_t *tree, char *parent) {
+  for (uint32_t t = 0; t < tree->n_joint; ++t) {
+    if (strcmp(tree->joints[t].parent->name, parent) == 0) {
+      return (tree->joints + t);
     }
   }return NULL;
 }
@@ -65,6 +82,7 @@ enum joint_type jmap(char *type) {
   return FIXED;
 }
 
+// TODO: implement this
 bool valid(ktree_t *tree) {
   return false;
 }
@@ -89,14 +107,9 @@ ktree_t *urdf2chain(char *urdf_string) {
   xmlNodePtr root = xmlDocGetRootElement(doc);
   xmlXPathContextPtr ctx = xmlXPathNewContext(doc);
 
-  char *robot_name = xmlGetProp(root, "name");
-  tree->name = malloc(sizeof(char) * (strlen(robot_name) + 1)); // count the '\0' char
-  if (tree->name == NULL) {
-    fprintf(stderr, "error: malloc failed..\n");  
-    exit(1);
-  }
-  strcpy(tree->name, robot_name);
-  free(robot_name);
+  xmlChar *root_name = xmlGetProp(root, (const unsigned char *) "name");
+  tree->name = strdup((char *) root_name);
+  xmlFree(root_name);
 
   tree->n_link = 0;
   tree->n_joint = 0;
@@ -104,9 +117,9 @@ ktree_t *urdf2chain(char *urdf_string) {
   // first pass to get the size to allocate in tree
   for (xmlNodePtr node = root->children; node; node = node->next) {
     if (node->type != XML_ELEMENT_NODE) continue;
-    if (strcmp(node->name, "link") == 0) {
+    if (strcmp((char *) node->name, "link") == 0) {
       ++(tree->n_link);
-    }else if (strcmp(node->name, "joint") == 0) {
+    }else if (strcmp((char *) node->name, "joint") == 0) {
       ++(tree->n_joint);
     }
   }
@@ -119,7 +132,7 @@ ktree_t *urdf2chain(char *urdf_string) {
   tree->n_link = 0;
   for (xmlNodePtr node = root->children; node; node = node->next) {
     if (node->type != XML_ELEMENT_NODE) continue;
-    if (strcmp(node->name, "link") == 0) {
+    if (strcmp((char *) node->name, "link") == 0) {
       ctx->node = node;
       link_t *L = (tree->links + tree->n_link);
 
@@ -176,13 +189,30 @@ ktree_t *urdf2chain(char *urdf_string) {
       free(irpy);
 
       L->inertial.origin.R    = rpy2quat(eu);
-      L->inertial.mass        = atof(xprop(ctx, "inertial/mass/@value"));
-      L->inertial.inertia.ixx = atof(xprop(ctx, "inertial/inertia/@ixx"));
-      L->inertial.inertia.iyy = atof(xprop(ctx, "inertial/inertia/@iyy"));
-      L->inertial.inertia.izz = atof(xprop(ctx, "inertial/inertia/@izz"));
-      L->inertial.inertia.ixy = atof(xprop(ctx, "inertial/inertia/@ixy"));
-      L->inertial.inertia.iyz = atof(xprop(ctx, "inertial/inertia/@iyz"));
-      L->inertial.inertia.izx = atof(xprop(ctx, "inertial/inertia/@izx"));
+      
+      char *m   = xprop(ctx, "inertial/mass/@value");
+      char *ixx = xprop(ctx, "inertial/inertia/@ixx");
+      char *iyy = xprop(ctx, "inertial/inertia/@iyy");
+      char *izz = xprop(ctx, "inertial/inertia/@izz");
+      char *ixy = xprop(ctx, "inertial/inertia/@ixy");
+      char *iyz = xprop(ctx, "inertial/inertia/@iyz");
+      char *izx = xprop(ctx, "inertial/inertia/@izx");
+
+      L->inertial.mass        = atof(m);
+      L->inertial.inertia.ixx = atof(ixx);
+      L->inertial.inertia.iyy = atof(iyy);
+      L->inertial.inertia.izz = atof(izz);
+      L->inertial.inertia.ixy = atof(ixy);
+      L->inertial.inertia.iyz = atof(iyz);
+      L->inertial.inertia.izx = atof(izx);
+
+      free(m);
+      free(ixx);
+      free(iyy);
+      free(izz);
+      free(ixy);
+      free(iyz);
+      free(izx);
 
       ++(tree->n_link);
     }
@@ -198,41 +228,62 @@ ktree_t *urdf2chain(char *urdf_string) {
   // TODO: make it O(j)
   for (xmlNodePtr node = root->children; node; node = node->next) {
     if (node->type != XML_ELEMENT_NODE) continue;
-    if (strcmp(node->name, "joint") == 0) {
+    if (strcmp((char *) node->name, "joint") == 0) {
       ctx->node = node;
       joint_t *J = &tree->joints[tree->n_joint];
 
       J->name = xprop(ctx, "@name");
-      J->type = jmap(xprop(ctx, "@type"));
+
+      char *type = xprop(ctx, "@type");
+      J->type = jmap(type);
+      free(type);
 
       char *xyz = xprop(ctx, "origin/@xyz");
       sscanf(xyz, "%lf %lf %lf",
         &J->origin.t.x,
         &J->origin.t.y,
         &J->origin.t.z);
+      free(xyz);
 
       so3_rpy_t eu;
       char *rpy = xprop(ctx, "origin/@rpy");
-      sscanf(xyz, "%lf %lf %lf",
+      sscanf(rpy, "%lf %lf %lf",
         &eu.r,
         &eu.p,
         &eu.y);
       J->origin.R = rpy2quat(eu);
+      free(rpy);
 
       // lprop is O(l)
-      J->parent = lprop(tree, xprop(ctx, "parent/@link"));
-      J->child = lprop(tree, xprop(ctx, "child/@link"));
-      xyz = xprop(ctx, "axis/@xyz");
-      sscanf(xyz, "%lf %lf %lf",
+      char *parent = xprop(ctx, "parent/@link");
+      char *child  = xprop(ctx, "child/@link");
+      J->parent = lprop(tree, parent);
+      J->child  = lprop(tree, child);
+      free(parent);
+      free(child);
+
+      char *axis = xprop(ctx, "axis/@xyz");
+      sscanf(axis, "%lf %lf %lf",
         &J->axis.x,
         &J->axis.y,
         &J->axis.z);
-      anorm(&J->axis); // axis l2 normalization 
+      anorm(&J->axis); // axis l2 normalization
+      free(axis);
 
-      J->limit.lower    = atof(xprop(ctx, "limit/@lower"));
-      J->limit.upper    = atof(xprop(ctx, "limit/@upper"));
-      J->limit.effort   = atof(xprop(ctx, "limit/@effort"));
-      J->limit.velocity = atof(xprop(ctx, "limit/@velocity"));
+      char *lower    = xprop(ctx, "limit/@lower");
+      char *upper    = xprop(ctx, "limit/@upper");
+      char *effort   = xprop(ctx, "limit/@effort");
+      char *velocity = xprop(ctx, "limit/@velocity");
+
+      J->limit.lower    = atof(lower);
+      J->limit.upper    = atof(upper);
+      J->limit.effort   = atof(effort);
+      J->limit.velocity = atof(velocity);
+
+      free(lower);
+      free(upper);
+      free(effort);
+      free(velocity);
     
       ++(tree->n_joint);
     }
@@ -258,32 +309,64 @@ ktree_t *furdf2chain(char *urdf_file) {
   uint32_t size;
   while ((size = read(fd, buff, RBUFFER_SIZE)) > 0) {
     if (t + size >= MAX_URDF_SIZE) {
-      fprintf(stderr, "error: max urdf size (%ld) exceeded\n", MAX_URDF_SIZE);
+      fprintf(stderr, "error: max urdf size (%d) exceeded\n", MAX_URDF_SIZE);
       fprintf(stderr, "hint : recompile with a higher MAX_URDF_SIZE\n");
       close(fd);
       exit(1);
     }memcpy(urdf_string + t, buff, size);
     t += size;
   }urdf_string[t] = 0;
-
   close(fd);
-
   ktree_t *tree = urdf2chain(urdf_string);
   return tree;
 }
 
 void free_tree(ktree_t *tree) {
   free(tree->name);
-
   for (uint32_t t = 0; t < tree->n_link; ++t) {
     free(tree->links[t].name);
     free(tree->links[t].vis_mesh);
     free(tree->links[t].col_mesh);
   }free(tree->links);
-
   for (uint32_t t = 0; t < tree->n_joint; ++t) {
     free(tree->joints[t].name);
   }free(tree->joints);
-
   free(tree);
+}
+
+chain_t *get_chain(
+    ktree_t *tree, char *base, char *tip) {
+  chain_t *chain = (chain_t *) malloc(sizeof(chain_t));
+  if (chain == NULL) {
+    fprintf(stderr, "error: malloc failed...\n");  
+    exit(1);
+  }chain->joints = (joint_t *) malloc(sizeof(joint_t) * tree->n_joint);
+  if (chain->joints == NULL) {
+    fprintf(stderr, "error: malloc failed...\n");  
+    exit(1);
+  }chain->base = lprop(tree, base);
+  chain->tip = lprop(tree, tip);
+  chain->dof = 0;
+  char curr[100]; // assume max joint name is 100
+  memset(curr, 0, sizeof(char) * 100);
+  strcpy(curr, base);
+
+  while (strcmp(curr, tip) != 0) {
+    joint_t *J = jpropp(tree, curr);
+    if (J == NULL) {
+      fprintf(stderr, "error: link `%s` not found", curr);
+      exit(1);
+    }
+    memcpy(chain->joints + chain->dof, J, sizeof(joint_t));
+    strcpy(curr, J->child->name);
+    curr[strlen(J->child->name)] = 0;
+    ++(chain->dof);
+  }
+
+  return chain;
+}
+
+void free_chain(chain_t *chain) {
+  free(chain->joints);
+  free(chain);
 }
