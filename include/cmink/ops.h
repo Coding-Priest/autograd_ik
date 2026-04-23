@@ -1,61 +1,41 @@
 /*
- * goemetry3d contains the required,
- * lie groups and transformation 
- * entities
+ * operations on matrices 
+ * and other lie groups
 */
 
-#ifndef GEOMETRY3D_H
-#define GEOMETRY3D_H
+#ifndef OPS_H
+#define OPS_H
 
-typedef struct vec3    vec3_t;
-typedef struct so3     so3_t;
-typedef struct so3_rpy so3_rpy_t;
-typedef struct se3     se3_t;
-typedef struct axis    axis_t;
+#include <cmink/geometry.h>
 
-typedef double matrix3d_t[3][3];
-typedef double matrix4d_t[4][4];
+/* vector addition, used for translation operation */
+vec3_t vec3_add(vec3_t v1, vec3_t v2);
 
-typedef matrix3d_t so3_mat_t;
-typedef matrix4d_t se3_mat_t;
+/* 
+ * vector dot to find angles between two vector 
+ * note: it returns a scalar
+*/
+double vec3_dot(vec3_t v1, vec3_t v2);
 
-struct vec3 {
-  double x;
-  double y;
-  double z;
-};
+/* vector cross product */
+vec3_t vec3_cross(vec3_t v1, vec3_t v2);
 
-// note: make sure things are l2 normalized
-// ps  : quaternions >> matrices
-struct so3 {
-  double w;
-  double x;
-  double y;
-  double z;
-};
+/* rotate a vector using a quaternion */
+vec3_t vec3_rot(vec3_t v, so3_t q);
 
-// SO(3) but in terms of rpy
-// follows the body 3-2-1 
-// convension
-struct so3_rpy {
-  double r;
-  double p;
-  double y;
-};
+/* 
+ * quaternion multiplication
+ * => applying q2 on q1
+*/
+so3_t so3_mul(so3_t q1, so3_t q2);
 
-// SE(3) is a lie group containing
-// translation and rotation
-struct se3 {
-  vec3_t t;
-  so3_t  R;
-};
+/* se3 multiplication */
+se3_t se3_mul(se3_t T1, se3_t T2);
 
-// same as point, but l2 normalized
-struct axis {
-  double x;
-  double y;
-  double z;
-};
+/* constant methods */
+vec3_t vec3_O();
+so3_t  so3_I();
+se3_t  se3_I();
 
 /* rpy to quat
  * so3_rpy_t rpy = {roll, pitch, yaw};

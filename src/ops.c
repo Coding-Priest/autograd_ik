@@ -1,5 +1,79 @@
 #include <math.h>
-#include <cmink/geometry3d.h>
+#include <cmink/geometry.h>
+#include <cmink/ops.h>
+
+vec3_t vec3_add(vec3_t v1, vec3_t v2) {
+  return (vec3_t) {
+    .x = v1.x + v2.x,
+    .y = v1.y + v2.y,
+    .z = v1.z + v2.z,
+  };
+}
+
+double vec3_dot(vec3_t v1, vec3_t v2) {
+  return v1.x * v2.x + 
+         v1.y * v2.y +
+         v1.z * v2.z;
+}
+
+vec3_t vec3_cross(vec3_t v1, vec3_t v2) {
+  return (vec3_t) {
+    .x = v1.y * v2.z - v1.z * v2.y,
+    .y = v1.z * v2.x - v1.x * v2.z,
+    .z = v1.x * v2.y - v1.y * v2.x,
+  };
+}
+
+vec3_t vec3_rot(vec3_t v, so3_t q) {
+  return (vec3_t) {
+    .x = v.x * q.w + v.y * q.z - v.z * q.y,
+    .y = v.y * q.w + v.x * q.y - v.z * q.x,
+    .z = v.z * q.w + v.x * q.y - v.y * q.x
+  };
+}
+
+so3_t so3_mul(so3_t q1, so3_t q2) {
+  return (so3_t) {
+    .w = q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z,
+    .x = q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y,
+    .y = q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x,
+    .z = q1.w * q2.z + q1.x * q2.y - q1.y * q2.x + q1.z * q2.w,
+  };
+}
+
+se3_t se3_mul(se3_t T1, se3_t T2) {
+  // T1 * T2 = [R1 R2,  R1 * t2 + t1]
+  //           [0    ,  1           ]
+  vec3_t rotated_t2 = vec3_rot(T2.t, T1.R);
+  return (se3_t) {
+    .t = vec3_add(T1.t, rotated_t2),
+    .R = so3_mul(T1.R, T2.R),
+  };
+}
+
+vec3_t vec3_O() {
+  return (vec3_t) {
+    .x = 0,
+    .y = 0,
+    .z = 0
+  };
+}
+
+so3_t so3_I() {
+  return (so3_t) {
+    .w = 1,
+    .x = 0,
+    .y = 0,
+    .z = 0
+  };
+}
+
+se3_t se3_I(){
+  se3_t T;
+  T.t = vec3_O();
+  T.R = so3_I();
+  return T;
+}
 
 so3_t rpy2quat(so3_rpy_t rpy) {
   so3_t q;

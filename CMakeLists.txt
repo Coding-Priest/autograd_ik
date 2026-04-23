@@ -5,7 +5,8 @@ find_package(libxml2 REQUIRED)
 
 add_library(${PROJECT_NAME} 
   src/chain.c
-  src/geometry3d.c
+  src/ops.c
+  src/fk.c
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE MAX_URDF_SIZE=20000)
 # remember to remove this

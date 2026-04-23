@@ -8,7 +8,7 @@
 
 #include <math.h>
 #include <stdio.h>
-#include <cmink/geometry3d.h>
+#include <cmink/geometry.h>
 
 #ifndef OUT_STREAM
 # define OUT_STREAM stdout

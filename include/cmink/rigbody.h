@@ -10,7 +10,7 @@
 #ifndef RIGID_BODY_H
 #define RIGID_BODY_H
 
-#include <cmink/geometry3d.h>
+#include <cmink/geometry.h>
 
 typedef struct inertia  inertia_t;
 typedef struct inertial inertial_t;

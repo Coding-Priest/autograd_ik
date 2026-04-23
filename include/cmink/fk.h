@@ -5,7 +5,7 @@
 #ifndef FK_H
 #define FK_H
 
-#include <cmink/goemetry3d.h>
+#include <cmink/geometry.h>
 #include <cmink/state.h>
 #include <cmink/chain.h>
 

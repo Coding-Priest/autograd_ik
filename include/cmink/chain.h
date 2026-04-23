@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <cmink/geometry3d.h>
+#include <cmink/geometry.h>
 #include <cmink/rigbody.h>
 #include <cmink/limit.h>
 
@@ -51,7 +51,7 @@ struct joint {
  * finds the transformation
  * from joint->parent to joint->child
 */
-se3_t jointT(joint_t *J);
+se3_t jointT(double angle, joint_t J);
 
 struct ktree {
   char *name;

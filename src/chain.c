@@ -31,6 +31,8 @@ static char *xprop(xmlXPathContextPtr ctx, const char *expr) {
 #include <stdint.h>
 
 #include <cmink/chain.h>
+#include <cmink/geometry.h>
+#include <cmink/ops.h>
 
 link_t *lprop(ktree_t *tree, char *lname) {
   for (uint32_t t = 0; t < tree->n_link; ++t) {
@@ -82,6 +84,32 @@ enum joint_type jmap(char *type) {
   return FIXED;
 }
 
+/*
+ * as of now this supports only
+ * the following joint types
+ * fixed
+ * revolute
+ * continuous
+ * prismatic
+ * TODO: introduce angle limits for revolute joint
+*/
+se3_t jointT(double angle, joint_t J) {
+  se3_t Tf = J.origin; // fixed transform
+  se3_t Tm = se3_I();  // motion transform
+ 
+  if (J.type == REVOLUTE || J.type == CONTINUOUS) {
+    Tm.R = axis2rot(angle, J.axis);
+  }else if (J.type == PRISMATIC) {
+    angle = (angle > J.limit.upper ? J.limit.upper : angle);
+    angle = (angle < J.limit.lower ? J.limit.lower : angle);
+    Tm.t.x = J.axis.x * angle;
+    Tm.t.y = J.axis.y * angle;
+    Tm.t.z = J.axis.z * angle;
+  }
+
+  return se3_mul(Tf, Tm);
+}
+
 // TODO: implement this
 bool valid(ktree_t *tree) {
   return false;
@@ -129,6 +157,7 @@ ktree_t *urdf2chain(char *urdf_string) {
     fprintf(stderr, "error: malloc failed..\n");  
     exit(1);
   }
+
   tree->n_link = 0;
   for (xmlNodePtr node = root->children; node; node = node->next) {
     if (node->type != XML_ELEMENT_NODE) continue;
