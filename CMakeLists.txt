@@ -13,6 +13,8 @@ add_library(${PROJECT_NAME}
   src/geometry3d.c
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE MAX_URDF_SIZE=20000)
+
 target_include_directories(${PROJECT_NAME} PUBLIC 
   include 
   ${LIBXML2_INCLUDE_DIR}

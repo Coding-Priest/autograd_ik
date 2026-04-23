@@ -60,7 +60,7 @@ struct ktree {
  * - find the root of the tree
  * - checks if tree is DAG 
 */
-bool valid(ktree_t *tree, char *error_messsage);
+bool valid(ktree_t *tree);
 
 /* loads the chain from a urdf string */
 ktree_t *urdf2chain(char *urdf_string);

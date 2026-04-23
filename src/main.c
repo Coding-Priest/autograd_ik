@@ -4,6 +4,7 @@
 #include <cmink/chain.h>
 #include <cmink/geometry3d.h>
 
+
 int main(int argc, char **argv) {
 
   so3_t q = {0.707, 0.707, 0, 0};

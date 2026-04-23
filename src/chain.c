@@ -18,10 +18,17 @@ static char *xprop(xmlXPathContextPtr ctx, const char *expr) {
   xmlNodePtr n = obj->nodesetval->nodeTab[0];
   xmlChar *v = xmlNodeGetContent(n);
 
-  char *out = strdup((char*)v);
+  char *temp = strdup((char*)v);
+  char *out  = malloc(sizeof(char) * (strlen(temp) + 1));
+  if (out == NULL) {
+    fprintf(stderr, "error: malloc failed..\n");  
+    exit(1);
+  }
+  strcpy(out, temp);
 
   xmlFree(v);
   xmlXPathFreeObject(obj);
+  free(temp);
   return out;
 }
 
@@ -40,6 +47,13 @@ link_t *lprop(ktree_t *tree, char *lname) {
   }return NULL;
 }
 
+#ifndef MAX_URDF_SIZE
+#warning "no compile defition for MAX_URDF_SIZE, falling to default (MAX_URDF_SIZE = 100000)"
+#define MAX_URDF_SIZE 100000
+#endif
+
+#define RBUFFER_SIZE 1000
+
 enum joint_type jmap(char *type) {
   if (!type) return FIXED;
   if (strcmp(type, "fixed") == 0)      return FIXED;
@@ -51,21 +65,24 @@ enum joint_type jmap(char *type) {
   return FIXED;
 }
 
-#define RBUFFER_SIZE 1000
-
-bool valid(ktree_t *tree, char *error_message) {
+bool valid(ktree_t *tree) {
   return false;
 }
 
 ktree_t *urdf2chain(char *urdf_string) {
   ktree_t *tree = (ktree_t *) malloc(sizeof(ktree_t));
+  if (tree == NULL) {
+    fprintf(stderr, "error: malloc failed..\n");  
+    exit(1);
+  }
+
   xmlDocPtr doc = xmlReadMemory(
     urdf_string, strlen(urdf_string),
     "blabla.xml", NULL, 0
   );
 
   if (doc == NULL) {
-    fprintf(stderr, "failed to parse urdf string\n");
+    fprintf(stderr, "error: failed to parse urdf string\n");
     exit(1);
   }
 
@@ -74,6 +91,10 @@ ktree_t *urdf2chain(char *urdf_string) {
 
   char *robot_name = xmlGetProp(root, "name");
   tree->name = malloc(sizeof(char) * (strlen(robot_name) + 1)); // count the '\0' char
+  if (tree->name == NULL) {
+    fprintf(stderr, "error: malloc failed..\n");  
+    exit(1);
+  }
   strcpy(tree->name, robot_name);
   free(robot_name);
 
@@ -91,6 +112,10 @@ ktree_t *urdf2chain(char *urdf_string) {
   }
 
   tree->links = (link_t *) malloc(sizeof(link_t) * tree->n_link);
+  if (tree->links == NULL) {
+    fprintf(stderr, "error: malloc failed..\n");  
+    exit(1);
+  }
   tree->n_link = 0;
   for (xmlNodePtr node = root->children; node; node = node->next) {
     if (node->type != XML_ELEMENT_NODE) continue;
@@ -102,50 +127,54 @@ ktree_t *urdf2chain(char *urdf_string) {
 
       // reusage registers
       so3_rpy_t eu; 
-      char *xyz;
-      char *rpy;
 
       L->vis_mesh = xprop(ctx, "visual/geometry/mesh/@filename");
-
-      xyz = xprop(ctx, "visual/origin/@xyz");
-      sscanf(xyz, "%lf %lf %lf",
+      char *vxyz = xprop(ctx, "visual/origin/@xyz");
+      sscanf(vxyz, "%lf %lf %lf",
         &L->vis_pose.t.x,
         &L->vis_pose.t.y,
         &L->vis_pose.t.z);
+      free(vxyz);
      
-      rpy = xprop(ctx, "visual/origin/@rpy");
-      sscanf(rpy, "%lf %lf %lf",
+      char *vrpy = xprop(ctx, "visual/origin/@rpy");
+      sscanf(vrpy, "%lf %lf %lf",
         &eu.r,
         &eu.p,
         &eu.y);
       L->vis_pose.R = rpy2quat(eu);
+      free(vrpy);
 
       L->col_mesh = xprop(ctx, "collision/geometry/mesh/@filename");
 
-      xyz = xprop(ctx, "collision/origin/@xyz");
-      sscanf(xyz, "%lf %lf %lf",
+      char *cxyz = xprop(ctx, "collision/origin/@xyz");
+      sscanf(cxyz, "%lf %lf %lf",
         &L->col_pose.t.x,
         &L->col_pose.t.y,
         &L->col_pose.t.z);
+      free(cxyz);
      
-      rpy = xprop(ctx, "collision/origin/@rpy");
-      sscanf(rpy, "%lf %lf %lf",
+      char *crpy = xprop(ctx, "collision/origin/@rpy");
+      sscanf(crpy, "%lf %lf %lf",
         &eu.r,
         &eu.p,
         &eu.y);
       L->col_pose.R = rpy2quat(eu);
+      free(crpy);
 
-      xyz = xprop(ctx, "inertial/origin/@xyz");
-      sscanf(xyz, "%lf %lf %lf",
+      char *ixyz = xprop(ctx, "inertial/origin/@xyz");
+      sscanf(ixyz, "%lf %lf %lf",
         &L->inertial.origin.t.x,
         &L->inertial.origin.t.y,
         &L->inertial.origin.t.z);
+      free(ixyz);
 
-      rpy = xprop(ctx, "inertial/origin/@rpy");
-      sscanf(rpy, "%lf %lf %lf",
+      char *irpy = xprop(ctx, "inertial/origin/@rpy");
+      sscanf(irpy, "%lf %lf %lf",
         &eu.r,
         &eu.p,
         &eu.y);
+      free(irpy);
+
       L->inertial.origin.R    = rpy2quat(eu);
       L->inertial.mass        = atof(xprop(ctx, "inertial/mass/@value"));
       L->inertial.inertia.ixx = atof(xprop(ctx, "inertial/inertia/@ixx"));
@@ -160,7 +189,10 @@ ktree_t *urdf2chain(char *urdf_string) {
   }
 
   tree->joints = (joint_t *) malloc(sizeof(joint_t) * tree->n_joint);
-  tree->n_joint = 0;
+  if (tree->joints == NULL) {
+    fprintf(stderr, "error: malloc failed..\n");  
+    exit(1);
+  }tree->n_joint = 0;
 
   // the following algo is O(l*j)
   // TODO: make it O(j)
@@ -216,24 +248,27 @@ ktree_t *urdf2chain(char *urdf_string) {
 ktree_t *furdf2chain(char *urdf_file) {
   int fd = open(urdf_file, O_RDONLY);
   if (fd < 0) {
-    fprintf(stderr, "no such file: '%s'\n", urdf_file);
+    fprintf(stderr, "error: no such file: '%s'\n", urdf_file);
     exit(1);
   }
 
-  char *urdf_string = malloc(sizeof(char) * 100000);
+  char urdf_string[MAX_URDF_SIZE];
   char buff[RBUFFER_SIZE];
   uint32_t t = 0;
   uint32_t size;
   while ((size = read(fd, buff, RBUFFER_SIZE)) > 0) {
-    memcpy(urdf_string + t, buff, size);
+    if (t + size >= MAX_URDF_SIZE) {
+      fprintf(stderr, "error: max urdf size (%ld) exceeded\n", MAX_URDF_SIZE);
+      fprintf(stderr, "hint : recompile with a higher MAX_URDF_SIZE\n");
+      close(fd);
+      exit(1);
+    }memcpy(urdf_string + t, buff, size);
     t += size;
   }urdf_string[t] = 0;
 
   close(fd);
 
   ktree_t *tree = urdf2chain(urdf_string);
-  free(urdf_string);
-
   return tree;
 }
 
