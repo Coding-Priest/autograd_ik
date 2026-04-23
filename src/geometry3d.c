@@ -186,6 +186,15 @@ void se32homo(se3_t T, matrix4d_t mat) {
   mat[3][3] = 1.0;
 }
 
+so3_t axis2rot(double angle, axis_t axis) {
+  so3_t q;
+  q.w = cos(angle);
+  q.x = sin(angle) * axis.x;
+  q.y = sin(angle) * axis.y;
+  q.z = sin(angle) * axis.z;
+  return q;
+}
+
 void anorm(axis_t *axis) {
   double den = sqrt(axis->x * axis->x + 
                     axis->y * axis->y + 

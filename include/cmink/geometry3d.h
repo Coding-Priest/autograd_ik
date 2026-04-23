@@ -101,12 +101,19 @@ se3_t homo2se3(const matrix4d_t mat);
 /* se3 to homogeneous transformation matrix */
 void se32homo(se3_t se3, matrix4d_t mat);
 
+/* 
+ * converts joint revolution angle
+ * and joint revolution axis to a
+ * quaternion
+ * note: this assumes the axis is in normalized
+ *       form
+*/
+so3_t axis2rot(double angle, axis_t axis);
+
 /* axis norm */
 void anorm(axis_t *axis);
 
 /* quat norm */
 void qnorm(so3_t *q);
-
-
 
 #endif
