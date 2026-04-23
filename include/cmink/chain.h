@@ -19,15 +19,6 @@ typedef struct joint joint_t;
 typedef struct ktree ktree_t;
 typedef struct chain chain_t;
 
-enum joint_type {
-  FIXED,
-  REVOLUTE,
-  CONTINUOUS,
-  PRISMATIC,
-  FLOATING,
-  PLANAR
-};
-
 struct link {
   char *name;
   char *vis_mesh; 
@@ -35,6 +26,15 @@ struct link {
   char *col_mesh;
   se3_t col_pose;
   inertial_t inertial;
+};
+
+enum joint_type {
+  FIXED,
+  REVOLUTE,
+  CONTINUOUS,
+  PRISMATIC,
+  FLOATING,
+  PLANAR
 };
 
 struct joint {
@@ -47,6 +47,12 @@ struct joint {
   limit_t limit;
 };
 
+/* 
+ * finds the transformation
+ * from joint->parent to joint->child
+*/
+se3_t jointT(joint_t *J);
+
 struct ktree {
   char *name;
   uint32_t n_link;
@@ -54,19 +60,6 @@ struct ktree {
   link_t  *links;  // list of links
   joint_t *joints; // list of joints
   link_t *root;
-};
-
-struct chain {
-  int dof;
-
-  link_t *base;
-  link_t *tip;
-
-  /* 
-   * all the joints in the chain
-   * in order 
-  */
-  joint_t *joints;
 };
 
 /* 
@@ -84,6 +77,19 @@ ktree_t *furdf2chain(char *urdf_file);
 
 /* free the tree safely to avoid memory leaks */
 void free_tree(ktree_t *tree);
+
+struct chain {
+  int dof;
+
+  link_t *base;
+  link_t *tip;
+
+  /* 
+   * all the joints in the chain
+   * in order 
+  */
+  joint_t *joints;
+};
 
 /* 
  * construction of chain from
