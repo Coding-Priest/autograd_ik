@@ -152,6 +152,40 @@ void rpy2mat(so3_rpy_t rpy, matrix3d_t m) {
   m[2][2] = cp * cr;
 }
 
+se3_t homo2se3(const matrix4d_t mat) {
+  se3_t T;
+
+  T.t.x = mat[0][3];
+  T.t.y = mat[1][3];
+  T.t.z = mat[2][3];
+
+  matrix3d_t R;
+  R[0][0] = mat[0][0]; R[0][1] = mat[0][1]; R[0][2] = mat[0][2];
+  R[1][0] = mat[1][0]; R[1][1] = mat[1][1]; R[1][2] = mat[1][2];
+  R[2][0] = mat[2][0]; R[2][1] = mat[2][1]; R[2][2] = mat[2][2];
+
+  T.R = mat2quat(R);
+  return T;
+}
+
+void se32homo(se3_t T, matrix4d_t mat) {
+  matrix3d_t R;
+  quat2mat(T.R, R);
+
+  mat[0][0] = R[0][0]; mat[0][1] = R[0][1]; mat[0][2] = R[0][2];
+  mat[1][0] = R[1][0]; mat[1][1] = R[1][1]; mat[1][2] = R[1][2];
+  mat[2][0] = R[2][0]; mat[2][1] = R[2][1]; mat[2][2] = R[2][2];
+
+  mat[0][3] = T.t.x;
+  mat[1][3] = T.t.y;
+  mat[2][3] = T.t.z;
+
+  mat[3][0] = 0.0;
+  mat[3][1] = 0.0;
+  mat[3][2] = 0.0;
+  mat[3][3] = 1.0;
+}
+
 void anorm(axis_t *axis) {
   double den = sqrt(axis->x * axis->x + 
                     axis->y * axis->y + 

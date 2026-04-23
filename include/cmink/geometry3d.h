@@ -95,10 +95,18 @@ so3_rpy_t mat2rpy(const matrix3d_t mat);
 */
 void rpy2mat(so3_rpy_t rpy, matrix3d_t mat);
 
+/* homogeneous transformation matrix to se3 */
+se3_t homo2se3(const matrix4d_t mat);
+
+/* se3 to homogeneous transformation matrix */
+void se32homo(se3_t se3, matrix4d_t mat);
+
 /* axis norm */
 void anorm(axis_t *axis);
 
 /* quat norm */
 void qnorm(so3_t *q);
+
+
 
 #endif

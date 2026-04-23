@@ -65,8 +65,8 @@ joint_t* jpropp(ktree_t *tree, char *parent) {
 }
 
 #ifndef MAX_URDF_SIZE
-#warning "no compile defition for MAX_URDF_SIZE, falling to default (MAX_URDF_SIZE = 100000)"
-#define MAX_URDF_SIZE 100000
+# warning "no compile defition for MAX_URDF_SIZE, falling to default (MAX_URDF_SIZE = 100000)"
+# define MAX_URDF_SIZE 100000
 #endif
 
 #define RBUFFER_SIZE 1000
